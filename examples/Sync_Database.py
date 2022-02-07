@@ -1,7 +1,8 @@
-from PyMemAPI import Course, SQLite, Memrise
+from PyMemAPI import Course, SQLite
+from Basic_Login import choose_course
 import logging
+import json
 from getpass import getpass
-
 FILE = "./course/course.db"
 
 
@@ -35,20 +36,14 @@ def sync_database(file: str, course: Course):
     course.update_audio("en")
 
 
-def choose_course(username: str, password: str) -> Course:
-    # Sign in Memrise
-    user = Memrise()
-    user.login(username, password)
 
-    # Choose the course
-    course: Course = user.select_course()
-    return course
 
 
 if __name__ == "__main__":
     # Enter username and password here
-    __username__ = input("Enter username: ")
-    __password__ = getpass("Enter password: ")
-
+    with open("account.env","r") as fp:
+        js = json.load(fp)
+        __username__ = js["USER"]
+        __password__ = js["PASSWORD"]
     course = choose_course(__username__, __password__)
     sync_database(FILE, course)

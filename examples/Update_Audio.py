@@ -1,32 +1,28 @@
 from PyMemAPI import Memrise
+from Basic_Login import choose_course
 from getpass import getpass
+import json
 
 FILE = "course.db"
 
 
-def choose_course():
-    # Enter username and password here
-    __username__ = input("Enter username: ")
-    __password__ = getpass("Enter password: ")
-
-    # Sign in Memrise
-    user = Memrise()
-    user.login(__username__, __password__)
-
-    # Choose the course
-    course = user.select_course()
-    return course
-
-
 if __name__ == "__main__":
-    course = choose_course()
+    with open("account.env","r") as fp:
+        js = json.load(fp)
+        __username__ = js["USER"]
+        __password__ = js["PASSWORD"]
+    course = choose_course(__username__,__password__)
     # levels = course.levels()
     # for level in levels:
     #     words = level.get_words()
     #     for word in words:
     #         while word.audio_count > 0:
     #             word.remove_audio()
-    course.update_audio("en", custom=True)
+    course.update_audio("fr")
+
+
+
+# External_Part
 
 # if __name__ == "__main__":
 # #     # course = choose_course()

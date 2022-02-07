@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from memrise import transUntilDone
 from text2ipa import get_IPAs
 from getpass import getpass
+from text2ipa import get_IPA
 import requests
 import json
 import logging
@@ -196,6 +197,7 @@ class Word:
 
         elif isinstance(audio, bytes):
             files = {"f": ("audio.mp3", audio, "audio/mp3")}
+            self.__upload_file(files)
 
         else:
             raise TypeError(f"Expected 'str' or 'bytes', but {type(audio)}")
@@ -236,6 +238,45 @@ class Word:
             self.audio_count -= 1
         return self.audio_count
 
+    def update_ipa(self, language: str, proxy: Any = None) -> requests.Response:
+        try:
+            ipa = get_IPA(self.text, language, proxy)
+        except (
+            requests.ConnectionError,
+            requests.ConnectTimeout,
+            requests.Timeout
+        ) as e:
+            logging.warning(f"Failed to update IPA \"{self.text}\": {e}")
+            ipa = "[???]"
+        cell_id = 4
+        path = '/ajax/thing/cell/update/'
+        data = {
+            'thing_id': f'{self.id}',
+            'cell_id': f'{cell_id}',
+            'cell_type': 'column',
+            'new_val': f'{ipa}'
+        }
+        headers = {
+            "Referer": f"{URL}/course/",
+            'X-CSRFToken': f'{self.client.session.cookies["csrftoken"]}',
+        }
+        
+        try:
+            response = self.client.session.post(
+                f"{URL}{path}",
+                headers=headers,
+                data=data,
+                timeout=20,
+            )
+        except requests.exceptions.RequestException as e:
+            raise ConnectionError(f"POST request failed': {e}")
+
+        try:
+            response.raise_for_status()
+        except requests.HTTPError as e:
+            print(response.content)
+            raise ConnectionError(f"Unexpected response to a POST request': {e}")
+        return response
 
 class Level:
     def __init__(self, client: Client, schema: LevelSchema):
@@ -477,6 +518,9 @@ class Course:
         for level_idx in range(len(levels)):
             words = levels[level_idx].get_words()
             for idx in range(len(words)):
+                if words[idx].audio_count >= 2: 
+                    print(words[idx].text)
+                    continue
                 try:
                     files = generate_audio(
                         text=words[idx].text,
